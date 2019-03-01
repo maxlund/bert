@@ -490,4 +490,7 @@ if __name__ == "__main__":
   flags.mark_flag_as_required("input_file")
   flags.mark_flag_as_required("bert_config_file")
   flags.mark_flag_as_required("output_dir")
+  config = tf.ConfigProto()
+  config.gpu_options.allow_growth=True
+  sess = tf.Session(config=config)
   tf.app.run()

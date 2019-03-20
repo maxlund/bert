@@ -25,6 +25,7 @@ import modeling
 import optimization
 import tokenization
 import tensorflow as tf
+import sys
 
 flags = tf.flags
 
@@ -196,12 +197,14 @@ class DataProcessor(object):
   @classmethod
   def _read_tsv(cls, input_file, quotechar=None):
     """Reads a tab separated value file."""
-    with tf.gfile.Open(input_file, "r") as f:
-      reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
-      lines = []
-      for line in reader:
-        lines.append(line)
-      return lines
+    with open(input_file, "r", encoding='utf-8') as f:
+        reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
+        lines = []
+        for line in reader:
+            if sys.version_info[0] == 2:
+                line = list(unicode(cell, 'utf-8') for cell in line)
+            lines.append(line)
+        return lines
 
 
 class XnliProcessor(DataProcessor):
@@ -372,6 +375,44 @@ class ColaProcessor(DataProcessor):
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
     return examples
+
+class SteProcessor(DataProcessor):
+    """Processor for STE module data"""
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train.tsv") , quotechar="\""), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv"), quotechar="\""), "dev")
+
+    def get_test_examples(self, data_dir):
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv"), quotechar="\""), "test")
+
+    def get_labels(self):
+        """See base class."""
+        return ['Troubleshooting', 'Introduction', 'Service tools (WM)', 'Safety',
+                'Service', 'Maintenance',
+                'Product overview repair and service (WM)', 'Service data (WM)',
+                'Operation', 'Assembly', 'Accessories', 'Technical data',
+                'Delivery and service (WM)', 'Troubleshooting (WM)', 'Warranty',
+                'Transportation, storage, disposal', 'Function overview (WM)',
+                'Installation', 'Warning', 'Cleaning (WM HCP)']
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            guid = "%s-%s" % (set_type, i)
+            text_a = line[1]
+            label = line[0]
+            examples.append(
+                InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+        return examples
 
 
 def convert_single_example(ex_index, example, label_list, max_seq_length,
@@ -788,6 +829,7 @@ def main(_):
       "mnli": MnliProcessor,
       "mrpc": MrpcProcessor,
       "xnli": XnliProcessor,
+      "ste": SteProcessor,
   }
 
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
